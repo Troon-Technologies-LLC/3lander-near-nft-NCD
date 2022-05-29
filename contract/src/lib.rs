@@ -1,33 +1,36 @@
-/*!
-Non-Fungible Token implementation with JSON serialization.
-NOTES:
-  - The maximum balance value is limited by U128 (2**128 - 1).
-  - JSON calls should pass U128 as a base-10 string. E.g. "100".
-  - The contract optimizes the inner trie structure by hashing account IDs. It will prevent some
-    abuse of deep tries. Shouldn't be an issue, once NEAR clients implement full hashing of keys.
-  - The contract tracks the change in storage before and after the call. If the storage increases,
-    the contract requires the caller of the contract to attach enough deposit to the function call
-    to cover the storage cost.
-    This is done to prevent a denial of service attack on the contract by taking all available storage.
-    If the storage decreases, the contract will issue a refund for the cost of the released storage.
-    The unused tokens from the attached deposit are also refunded, so it's safe to
-    attach more deposit than required.
-  - To prevent the deployed contract from being modified or deleted, it should not have any access
-    keys on its account.
-*/
 use near_contract_standards::non_fungible_token::metadata::{
     NFTContractMetadata, NonFungibleTokenMetadataProvider, TokenMetadata, NFT_METADATA_SPEC,
 };
 use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_contract_standards::non_fungible_token::NonFungibleToken;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::collections::LazyOption;
 use near_sdk::json_types::ValidAccountId;
 use near_sdk::{
-    env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue,
+    env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue, serde_json
 };
 
 near_sdk::setup_alloc!();
+
+const PURPLE_IMAGE: &str = "https://bafybeihgivtoptr34zxvnf6xvvkvontr23ohtkqk52nfazb2a7hj4wlqxq.ipfs.dweb.link/purple-3lander-nft.png";
+const PURPLE_IMAGE_HASH: &str = "N2Y4OWY0ZTdlMGQ4ZThmNTU5NWI0MTM0ZDNkNDc1MzMxMWM3NDhhZTJkZmU2NWJkM2I5YzRmMmFjNzEyYmM1Yw==";
+
+const RED_IMAGE: &str = "https://bafybeifufsoutyr6ujyizzjhaj6vdxlvfttvn32ra5ajqvc2maiy3nlxzu.ipfs.dweb.link/red-3lander-nft.png";
+const RED_IMAGE_HASH: &str = "NDE3ODQyM2EzYTY3OWJmY2FlYjRiMjc5OTVjZmM1MmQ0MjlkN2EwNDdiZGFlNjM1MzcxZjNkZmJkMmRlYWMyYg==";
+
+const YELLOW_IMAGE: &str = "https://bafybeigl63c63p35562vhtc3wtkhrm67nzebg2gyyejfmzrmx437sbgeru.ipfs.dweb.link/yellow-3lander-nft.png";
+const YELLOW_IMAGE_HASH: &str = "MTM0NWJjODU3ZDJiMWI4YTUzZmY1MjAwMDEyNTQ0MDZmMmMzZTk5ZTliMWQ4MWNlZDRlZWQxYzc5ZWM1ZDYzYg==";
+
+
+#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub enum Color {
+    Purple,
+    Red,
+    Yellow,
+}
+
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -57,8 +60,8 @@ impl Contract {
             owner_id,
             NFTContractMetadata {
                 spec: NFT_METADATA_SPEC.to_string(),
-                name: "Example NEAR non-fungible token".to_string(),
-                symbol: "EXAMPLE".to_string(),
+                name: "3lander non-fungible token".to_string(),
+                symbol: "3LANDER".to_string(),
                 icon: Some(DATA_IMAGE_SVG_NEAR_ICON.to_string()),
                 base_uri: None,
                 reference: None,
@@ -83,14 +86,6 @@ impl Contract {
         }
     }
 
-    /// Mint a new token with ID=`token_id` belonging to `receiver_id`.
-    ///
-    /// Since this example implements metadata, it also requires per-token metadata to be provided
-    /// in this call. `self.tokens.mint` will also require it to be Some, since
-    /// `StorageKey::TokenMetadata` was provided at initialization.
-    ///
-    /// `self.tokens.mint` will enforce `predecessor_account_id` to equal the `owner_id` given in
-    /// initialization call to `new`.
     #[payable]
     pub fn nft_mint(
         &mut self,
@@ -98,7 +93,48 @@ impl Contract {
         receiver_id: ValidAccountId,
         token_metadata: TokenMetadata,
     ) -> Token {
+        assert_eq!(self.tokens.owner_by_id.len(), 0, "Total supply can only be 1 token");
+
         self.tokens.mint(token_id, receiver_id, Some(token_metadata))
+    }
+
+    pub fn change_color(
+        &mut self,
+        token_id: TokenId,
+        color: Color,
+    ) {
+        //make sure that the person calling the function is the owner of the token
+        let owner_id = &self.tokens.owner_by_id.get(&token_id).expect("Token not found");
+        assert_eq!(
+            &env::predecessor_account_id(),
+            owner_id,
+            "Predecessor must be the token owner."
+        );
+
+        //get the token metadata object from the token ID
+        let mut token_metadata = self.tokens.token_metadata_by_id
+            .as_ref()
+            .unwrap()
+            .get(&token_id)
+            .unwrap();
+
+
+        let media = match color {
+            Color::Purple => PURPLE_IMAGE,
+            Color::Red => RED_IMAGE,
+            Color::Yellow => YELLOW_IMAGE,
+        };
+
+        let media_hash = match color {
+            Color::Purple => PURPLE_IMAGE_HASH,
+            Color::Red => RED_IMAGE_HASH,
+            Color::Yellow => YELLOW_IMAGE_HASH,
+        };
+
+        token_metadata.media = Some(media.to_string());
+        token_metadata.media_hash = Some(serde_json::from_str(&format!("\"{}\"", media_hash)).unwrap());
+
+        self.tokens.token_metadata_by_id.as_mut().unwrap().insert(&token_id, &token_metadata);
     }
 }
 
@@ -121,7 +157,7 @@ mod tests {
 
     use super::*;
 
-    const MINT_STORAGE_COST: u128 = 5870000000000000000000;
+    const MINT_STORAGE_COST: u128 = 7780000000000000000000;
 
     fn get_context(predecessor_account_id: ValidAccountId) -> VMContextBuilder {
         let mut builder = VMContextBuilder::new();
@@ -134,10 +170,10 @@ mod tests {
 
     fn sample_token_metadata() -> TokenMetadata {
         TokenMetadata {
-            title: Some("Olympus Mons".into()),
-            description: Some("The tallest mountain in the charted solar system".into()),
-            media: None,
-            media_hash: None,
+            title: Some("3Lander NFT".into()),
+            description: Some("What a guy".into()),
+            media: Some(PURPLE_IMAGE.to_string()),
+            media_hash: Some(serde_json::from_str(&format!("\"{}\"", PURPLE_IMAGE_HASH)).unwrap()),
             copies: Some(1u64),
             issued_at: None,
             expires_at: None,
@@ -184,6 +220,27 @@ mod tests {
         assert_eq!(token.owner_id, accounts(0).to_string());
         assert_eq!(token.metadata.unwrap(), sample_token_metadata());
         assert_eq!(token.approved_account_ids.unwrap(), HashMap::new());
+    }
+
+    #[test]
+    #[should_panic(expected = "Total supply can only be 1 token")]
+    fn test_mint_second_token() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::new_default_meta(accounts(0).into());
+
+        testing_env!(context
+            .storage_usage(env::storage_usage())
+            .attached_deposit(MINT_STORAGE_COST)
+            .predecessor_account_id(accounts(0))
+            .build());
+
+        let token_id = "0".to_string();
+        let token = contract.nft_mint(token_id.clone(), accounts(0), sample_token_metadata());
+
+        assert_eq!(token.token_id, token_id);
+
+        contract.nft_mint("1".to_string(), accounts(0), sample_token_metadata());
     }
 
     #[test]
@@ -328,5 +385,28 @@ mod tests {
             .attached_deposit(0)
             .build());
         assert!(!contract.nft_is_approved(token_id.clone(), accounts(1), Some(1)));
+    }
+
+    #[test]
+    fn test_change_color() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::new_default_meta(accounts(0).into());
+
+        testing_env!(context
+            .storage_usage(env::storage_usage())
+            .attached_deposit(MINT_STORAGE_COST)
+            .predecessor_account_id(accounts(0))
+            .build());
+        let token_id = "0".to_string();
+        contract.nft_mint(token_id.clone(), accounts(0), sample_token_metadata());
+
+        let color = Color::Yellow;
+        contract.change_color("0".to_string(), color);
+
+        let token = contract.nft_token(token_id.clone()).unwrap();
+        let media = token.metadata.unwrap().media.unwrap();
+
+        assert_eq!(YELLOW_IMAGE, media)
     }
 }
