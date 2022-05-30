@@ -1,17 +1,22 @@
-Non-fungible Token (NFT)
+3lander NFT on Near blockchain
 ===================
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/near-examples/NFT)
+This repository is meant to be applied for [ncd] certification. I used [nft-example] repository as a base for this project.
 
+Smart contract that allows to mint 1 of 1 art NFT and gives the ability to the owner to determine the piece's color.
+There are 3 variations of the work. The owner will determine which of the 3 is displayed.
 
-This repository includes an example implementation of a [non-fungible token] contract which uses [near-contract-standards] and [simulation] tests.
+The idea was inspired by [ngmi] NFT by XCOPY.
+The image itself I got from one of the 3landers NFTs [3landers-5169]. Just because it looks funny
 
-  [non-fungible token]: https://nomicon.io/Standards/NonFungibleToken/README.html
-  [near-contract-standards]: https://github.com/near/near-sdk-rs/tree/master/near-contract-standards
-  [simulation]: https://github.com/near/near-sdk-rs/tree/master/near-sdk-sim
+![Artwork](artwork.png)
+
+  [nft-example]: https://github.com/near-examples/NFT
+  [ncd]: https://www.near.university/courses/near-certified-developerT
+  [ngmi]: https://www.sothebys.com/en/buy/auction/2021/natively-digital-a-curated-nft-sale-2/ngmi
+  [3landers-5169]: https://opensea.io/assets/ethereum/0xb4d06d46a8285f4ec79fd294f78a881799d8ced9/5169
 Prerequisites
 =============
-If you're using Gitpod, you can skip this step.
 
   * Make sure Rust is installed per the prerequisites in [`near-sdk-rs`](https://github.com/near/near-sdk-rs).
   * Make sure [near-cli](https://github.com/near/near-cli) is installed.
@@ -19,48 +24,36 @@ If you're using Gitpod, you can skip this step.
 Explore this contract
 =====================
 
-The source for this contract is in `nft/src/lib.rs`. It provides methods to manage access to tokens, transfer tokens, check access, and get token owner. Note, some further exploration inside the rust macros is needed to see how the `NonFungibleToken` contract is implemented.
+The source for this contract is in `contract/src/lib.rs`. It provides methods to mint and change color methods, as well as other NFT related methods from near-sdk.
 
 Building this contract
 ======================
 Run the following, and we'll build our rust project up via cargo. This will generate our WASM binaries into our `res/` directory. This is the smart contract we'll be deploying onto the NEAR blockchain later.
 ```bash
-./scripts/build.sh
+cd contract
+./build.sh
 ```
 
 Testing this contract
 =====================
-We have some tests that you can run. For example, the following will run our simple tests to verify that our contract code is working.
+We have some tests that you can run. For example, the following will run tests to verify that our contract code is working.
 
 *Unit Tests*
 ```bash
-cd nft
 cargo test -- --nocapture
 ```
 
-*Integration Tests*
-*Rust*
-```bash
-cd integration-tests/rs
-cargo run --example integration-tests
-```
-*TypeScript*
-```bash
-cd integration-tests/ts
-yarn && yarn test 
-```
-
-The more complex simulation tests aren't run with this command, but we can find them in `tests/sim`.
-
 Using this contract
 ===================
+
+// TODO make bash script that do all of that
 
 ### Quickest deploy
 
 You can build and deploy this smart contract to a development account. [Dev Accounts](https://docs.near.org/docs/concepts/account#dev-accounts) are auto-generated accounts to assist in developing and testing smart contracts. Please see the [Standard deploy](#standard-deploy) section for creating a more personalized account to deploy to.
 
 ```bash
-near dev-deploy --wasmFile res/non_fungible_token.wasm
+near dev-deploy --wasmFile res/lander_near_nft_ncd.wasm
 ```
 
 Behind the scenes, this is creating an account and deploying a contract to it. On the console, notice a message like:
@@ -111,7 +104,7 @@ We can tell if the environment variable is set correctly if our command line pri
 
 Now we can deploy the compiled contract in this example to your account:
 
-    near deploy --wasmFile res/non_fungible_token.wasm --accountId $ID
+    near deploy --wasmFile res/lander_near_nft_ncd.wasm --accountId $ID
 
 NFT contract should be initialized before usage. More info about the metadata at [nomicon.io](https://nomicon.io/Standards/NonFungibleToken/Metadata.html). But for now, we'll initialize with the default metadata.
 
@@ -123,7 +116,18 @@ We'll be able to view our metadata right after:
 
 Then, let's mint our first token. This will create a NFT based on Olympus Mons where only one copy exists:
 
-    near call $ID nft_mint '{"token_id": "0", "receiver_id": "'$ID'", "token_metadata": { "title": "Olympus Mons", "description": "Tallest mountain in charted solar system", "media": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Olympus_Mons_alt.jpg/1024px-Olympus_Mons_alt.jpg", "copies": 1}}' --accountId $ID --deposit 0.1
+    near call $ID nft_mint '{"token_id": "0", "receiver_id": "'$ID'", "token_metadata": { "title": "Lander", "description": "3landers", "media": "https://bafybeihgivtoptr34zxvnf6xvvkvontr23ohtkqk52nfazb2a7hj4wlqxq.ipfs.dweb.link/purple-3lander-nft.png", "media_hash": "N2Y4OWY0ZTdlMGQ4ZThmNTU5NWI0MTM0ZDNkNDc1MzMxMWM3NDhhZTJkZmU2NWJkM2I5YzRmMmFjNzEyYmM1Yw==", "copies": 1}}' --accountId $ID --deposit 0.1
+
+
+Changing the color of the artwork
+====================
+
+Default color is purple. Available colors are purple, yellow and red. 
+
+    near call $ID change_color '{"token_id": "0", "color": "Yellow"}' --accountId $ID
+    near call $ID change_color '{"token_id": "0", "color": "Red"}' --accountId $ID
+    near call $ID change_color '{"token_id": "0", "color": "Purple"}' --accountId $ID
+
 
 Transferring our NFT
 ====================
@@ -141,14 +145,3 @@ Then we'll transfer over the NFT into Alice's account. Exactly 1 yoctoNEAR of de
     near call $ID nft_transfer '{"token_id": "0", "receiver_id": "alice.'$ID'", "memo": "transfer ownership"}' --accountId $ID --depositYocto 1
 
 Checking Alice's account again shows us that she has the Olympus Mons token.
-
-Notes
-=====
-
-* The maximum balance value is limited by U128 (2**128 - 1).
-* JSON calls should pass U128 as a base-10 string. E.g. "100".
-* This does not include escrow functionality, as ft_transfer_call provides a superior approach. An escrow system can, of course, be added as a separate contract or additional functionality within this contract.
-
-AssemblyScript
-==============
-Currently, AssemblyScript is not supported for this example. An old version can be found in the [NEP4 example](https://github.com/near-examples/NFT/releases/tag/nep4-example), but this is not recommended as it is out of date and does not follow the standards the NEAR SDK has set currently.
