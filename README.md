@@ -114,7 +114,7 @@ We'll be able to view our metadata right after:
 
     near view $ID nft_metadata
 
-Then, let's mint our first token. This will create a NFT based on Olympus Mons where only one copy exists:
+Then, let's mint our first token. This will create a NFT  where only one copy exists:
 
     near call $ID nft_mint '{"token_id": "0", "receiver_id": "'$ID'", "token_metadata": { "title": "Lander", "description": "3landers", "media": "https://bafybeihgivtoptr34zxvnf6xvvkvontr23ohtkqk52nfazb2a7hj4wlqxq.ipfs.dweb.link/purple-3lander-nft.png", "media_hash": "N2Y4OWY0ZTdlMGQ4ZThmNTU5NWI0MTM0ZDNkNDc1MzMxMWM3NDhhZTJkZmU2NWJkM2I5YzRmMmFjNzEyYmM1Yw==", "copies": 1}}' --accountId $ID --deposit 0.1
 
@@ -127,6 +127,11 @@ Default color is purple. Available colors are purple, yellow and red.
     near call $ID change_color '{"token_id": "0", "color": "Yellow"}' --accountId $ID
     near call $ID change_color '{"token_id": "0", "color": "Red"}' --accountId $ID
     near call $ID change_color '{"token_id": "0", "color": "Purple"}' --accountId $ID
+
+Check that media was changed
+
+    near view $ID nft_token '{"token_id": "0"}' --accountId $ID
+
 
 
 Transferring our NFT
@@ -144,4 +149,4 @@ Then we'll transfer over the NFT into Alice's account. Exactly 1 yoctoNEAR of de
 
     near call $ID nft_transfer '{"token_id": "0", "receiver_id": "alice.'$ID'", "memo": "transfer ownership"}' --accountId $ID --depositYocto 1
 
-Checking Alice's account again shows us that she has the Olympus Mons token.
+Checking Alice's account again shows us that she has the 3landers near token.
