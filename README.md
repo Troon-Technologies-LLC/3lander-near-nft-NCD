@@ -46,53 +46,15 @@ cargo test -- --nocapture
 Using this contract
 ===================
 
-// TODO make bash script that do all of that
-
-### Quickest deploy
-
-You can build and deploy this smart contract to a development account. [Dev Accounts](https://docs.near.org/docs/concepts/account#dev-accounts) are auto-generated accounts to assist in developing and testing smart contracts. Please see the [Standard deploy](#standard-deploy) section for creating a more personalized account to deploy to.
-
-```bash
-near dev-deploy --wasmFile res/lander_near_nft_ncd.wasm
-```
-
-Behind the scenes, this is creating an account and deploying a contract to it. On the console, notice a message like:
-
->Done deploying to dev-1234567890123
-
-In this instance, the account is `dev-1234567890123`. A file has been created containing a key pair to
-the account, located at `neardev/dev-account`. To make the next few steps easier, we're going to set an
-environment variable containing this development account id and use that when copy/pasting commands.
-Run this command to set the environment variable:
-
-```bash
-source neardev/dev-account.env
-```
-
-You can tell if the environment variable is set correctly if your command line prints the account name after this command:
-```bash
-echo $CONTRACT_NAME
-```
-
-The next command will initialize the contract using the `new` method:
-
-```bash
-near call $CONTRACT_NAME new_default_meta '{"owner_id": "'$CONTRACT_NAME'"}' --accountId $CONTRACT_NAME
-```
-
-To view the NFT metadata:
-
-```bash
-near view $CONTRACT_NAME nft_metadata
-```
-
-### Standard deploy
-
 This smart contract will get deployed to your NEAR account. For this example, please create a new NEAR account. Because NEAR allows the ability to upgrade contracts on the same account, initialization functions must be cleared. If you'd like to run this example on a NEAR account that has had prior contracts deployed, please use the `near-cli` command `near delete`, and then recreate it in Wallet. To create (or recreate) an account, please follow the directions in [Test Wallet](https://wallet.testnet.near.org) or ([NEAR Wallet](https://wallet.near.org/) if we're using `mainnet`).
 
 In the project root, log in to your newly created account with `near-cli` by following the instructions after this command.
 
     near login
+
+OR create new account. (Add your account name)
+
+    near create-account lander.example.near --masterAccount example.testnet
 
 To make this tutorial easier to copy/paste, we're going to set an environment variable for our account id. In the below command, replace `MY_ACCOUNT_NAME` with the account name we just logged in with, including the `.testnet` (or `.near` for `mainnet`):
 
@@ -118,6 +80,9 @@ Then, let's mint our first token. This will create a NFT  where only one copy ex
 
     near call $ID nft_mint '{"token_id": "0", "receiver_id": "'$ID'", "token_metadata": { "title": "Lander", "description": "3landers", "media": "https://bafybeihgivtoptr34zxvnf6xvvkvontr23ohtkqk52nfazb2a7hj4wlqxq.ipfs.dweb.link/purple-3lander-nft.png", "media_hash": "N2Y4OWY0ZTdlMGQ4ZThmNTU5NWI0MTM0ZDNkNDc1MzMxMWM3NDhhZTJkZmU2NWJkM2I5YzRmMmFjNzEyYmM1Yw==", "copies": 1}}' --accountId $ID --deposit 0.1
 
+Check the token
+
+    near view $ID nft_token '{"token_id": "0"}' --accountId $ID
 
 Changing the color of the artwork
 ====================
